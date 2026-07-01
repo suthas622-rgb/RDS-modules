@@ -40,3 +40,27 @@ data "aws_subnet" "input" {
   
 }
 
+data "aws_vpc_security_group_rule" "input" {
+  for_each = toset(data.aws_vpc_security_group_rule.input.ids)
+  security_group_rule_id = each.value
+
+  lifecycle {
+    postcondition {
+      condition = (
+        self.is_egress
+        ? true
+        : self.cidr_ipv4 == null
+        && self.cidr_ipv6 == null
+        && self.referenced_security_group_id != null
+      )
+      error_message = <<-EOT
+      invalid inbound rule
+
+      ID = ${self.security_group_id}
+
+      rules must only allow traffic from other SG as references 
+      EOT
+    }
+  }
+}
+
